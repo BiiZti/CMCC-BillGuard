@@ -226,8 +226,6 @@ Excel文件必须包含以下列：
 
 ## 📞 技术支持
 
-- **邮箱**: support@cmcc-billguard.com
-- **文档**: [在线文档](https://docs.cmcc-billguard.com)
 - **问题反馈**: [GitHub Issues](https://github.com/your-repo/CMCC-BillGuard/issues)
 
 ## 📄 许可证
