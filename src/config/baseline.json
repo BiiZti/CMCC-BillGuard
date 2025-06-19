@@ -1,0 +1,102 @@
+{
+  "business_types": {
+    "开户": {
+      "normal_amount_range": [0, 200],
+      "normal_frequency_per_day": 10,
+      "risk_weight": 0.3,
+      "amount_thresholds": {"low": 0.2, "medium": 0.5, "high": 0.8},
+      "special_rules": {"night_high_traffic": true, "rapid_succession": false}
+    },
+    "销户": {
+      "normal_amount_range": [0, 100],
+      "normal_frequency_per_day": 5,
+      "risk_weight": 0.2,
+      "amount_thresholds": {"low": 0.2, "medium": 0.5, "high": 0.8},
+      "special_rules": {"night_high_traffic": false, "rapid_succession": false}
+    },
+    "套餐变更": {
+      "normal_amount_range": [0, 500],
+      "normal_frequency_per_day": 15,
+      "risk_weight": 0.4,
+      "amount_thresholds": {"low": 0.3, "medium": 0.6, "high": 0.85},
+      "special_rules": {"night_high_traffic": true, "rapid_succession": true}
+    },
+    "充值": {
+      "normal_amount_range": [10, 1000],
+      "normal_frequency_per_day": 20,
+      "risk_weight": 0.5,
+      "amount_thresholds": {"low": 0.1, "medium": 0.4, "high": 0.7},
+      "special_rules": {"night_high_traffic": false, "rapid_succession": true}
+    },
+    "流量包": {
+      "normal_amount_range": [5, 200],
+      "normal_frequency_per_day": 25,
+      "risk_weight": 0.3,
+      "amount_thresholds": {"low": 0.2, "medium": 0.5, "high": 0.8},
+      "special_rules": {"night_high_traffic": true, "rapid_succession": true}
+    },
+    "国际漫游": {
+      "normal_amount_range": [50, 2000],
+      "normal_frequency_per_day": 2,
+      "risk_weight": 0.8,
+      "amount_thresholds": {"low": 0.15, "medium": 0.45, "high": 0.75},
+      "special_rules": {"night_high_traffic": true, "rapid_succession": true, "roaming_surge": true}
+    }
+  },
+  "operators": {
+    "baseline_period_days": 30,
+    "learning_rate": 0.1,
+    "min_operations_for_baseline": 10
+  },
+  "time_patterns": {
+    "business_hours": {
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "night_hours": {
+      "start": "22:00",
+      "end": "06:00"
+    },
+    "weekend_multiplier": 0.5
+  },
+  "anomaly_thresholds": {
+    "amount": {
+      "low_risk": 0.3,
+      "medium_risk": 0.6,
+      "high_risk": 0.8
+    },
+    "frequency": {
+      "low_risk": 0.4,
+      "medium_risk": 0.7,
+      "high_risk": 0.9
+    },
+    "time": {
+      "low_risk": 0.2,
+      "medium_risk": 0.5,
+      "high_risk": 0.8
+    }
+  },
+  "risk_weights": {
+    "amount_anomaly": 0.4,
+    "frequency_anomaly": 0.3,
+    "time_anomaly": 0.2,
+    "operator_anomaly": 0.1
+  },
+  "special_patterns": {
+    "night_high_traffic": {
+      "enabled": true,
+      "threshold_multiplier": 2.0,
+      "risk_boost": 0.3
+    },
+    "international_roaming_surge": {
+      "enabled": true,
+      "threshold_multiplier": 3.0,
+      "risk_boost": 0.5
+    },
+    "rapid_succession": {
+      "enabled": true,
+      "min_interval_seconds": 30,
+      "risk_boost": 0.2
+    }
+  }
+} 
