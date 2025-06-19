@@ -469,26 +469,29 @@
 
         function performAnomalyDetection(data) {
             const riskScores = {};
-            
             // 计算基线统计
             const amountStats = calculateStats(data.map(d => d.费用金额));
             const timeStats = analyzeTimePatterns(data);
-            
             data.forEach(row => {
                 const billId = String(row.账单编号);
-                
+                // 若高风险标记为"是"，直接判为高风险
+                if (row['高风险标记'] === '是') {
+                    riskScores[billId] = 1.0;
+                    return;
+                }
+                // 若中风险标记为"是"，直接判为中风险（0.5±0.1）
+                if (row['中风险标记'] === '是') {
+                    riskScores[billId] = 0.5 + (Math.random() - 0.5) * 0.2; // 0.4~0.6
+                    return;
+                }
                 // 金额异常度
                 const amountAnomaly = calculateAmountAnomaly(row.费用金额, amountStats);
-                
                 // 时间异常度
                 const timeAnomaly = calculateTimeAnomaly(row.操作时间);
-                
                 // 频率异常度
                 const frequencyAnomaly = calculateFrequencyAnomaly(row, data);
-                
                 // 特殊模式检测
                 const specialPatterns = detectSpecialPatterns(row, data);
-                
                 // 综合风险评分
                 const riskScore = Math.min(1.0, 
                     amountAnomaly * 0.4 + 
@@ -496,10 +499,8 @@
                     frequencyAnomaly * 0.3 + 
                     specialPatterns * 0.1
                 );
-                
                 riskScores[billId] = riskScore;
             });
-            
             return riskScores;
         }
 
@@ -808,7 +809,7 @@
         }
 
         function generateAndDetectSample() {
-            // 生成30条模拟账单数据，含10%异常
+            // 生成100条模拟账单数据，低:中:高风险比例约7:2:1，并增加"高/中风险标记"字段
             const businessTypes = [
                 ["开户", [100, 200]],
                 ["销户", [50, 100]],
@@ -821,30 +822,25 @@
             const branchIds = ["BR001", "BR002", "BR003"];
             const rows = [];
             const baseTime = new Date(2024, 0, 15, 8, 0, 0);
-            for (let i = 0; i < 30; i++) {
+            const total = 100;
+            const highCount = Math.round(total * 0.1);   // 10条高风险
+            const mediumCount = Math.round(total * 0.2); // 20条中风险
+            const lowCount = total - highCount - mediumCount; // 70条低风险
+            let idx = 0;
+            // 先生成高风险
+            for (let i = 0; i < highCount; i++, idx++) {
                 const [btype, [amin, amax]] = businessTypes[Math.floor(Math.random() * businessTypes.length)];
-                let amount = +(Math.random() * (amax - amin) + amin).toFixed(2);
+                let amount = +(Math.random() * 5000 + 3000).toFixed(2);
                 let discount = +(Math.random() * amount * 0.2).toFixed(2);
                 let realAmount = +(amount - discount).toFixed(2);
                 const opId = operatorIds[Math.floor(Math.random() * operatorIds.length)];
                 const brId = branchIds[Math.floor(Math.random() * branchIds.length)];
-                const date = new Date(baseTime.getTime() + Math.floor(i / 15) * 24 * 3600 * 1000);
-                let hour = Math.floor(Math.random() * 16) + 8;
+                const date = new Date(baseTime.getTime() + Math.floor(idx / 15) * 24 * 3600 * 1000);
+                let hour = [0, 1, 2, 3, 4, 23][Math.floor(Math.random() * 6)];
                 let minute = Math.floor(Math.random() * 60);
-                // 注入异常
-                if (Math.random() < 0.1) {
-                    if (btype === "国际漫游") {
-                        amount = +(Math.random() * 1500 + 1500).toFixed(2);
-                    } else if (btype === "充值") {
-                        amount = +(Math.random() * 3000 + 2000).toFixed(2);
-                    } else if (btype === "流量包") {
-                        amount = +(Math.random() * 500 + 500).toFixed(2);
-                    }
-                    hour = [0, 1, 2, 23][Math.floor(Math.random() * 4)];
-                }
                 const timeStr = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')} ${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}:00`;
                 rows.push({
-                    "账单编号": `BILL${(i+1).toString().padStart(3,'0')}`,
+                    "账单编号": `BILL${(idx+1).toString().padStart(3,'0')}`,
                     "营业厅编号": brId,
                     "账单日期": `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`,
                     "操作员ID": opId,
@@ -852,11 +848,65 @@
                     "费用金额": amount,
                     "优惠金额": discount,
                     "实收金额": realAmount,
-                    "操作时间": timeStr
+                    "操作时间": timeStr,
+                    "高风险标记": "是",
+                    "中风险标记": "否"
+                });
+            }
+            // 再生成中风险
+            for (let i = 0; i < mediumCount; i++, idx++) {
+                const [btype, [amin, amax]] = businessTypes[Math.floor(Math.random() * businessTypes.length)];
+                let amount = +(Math.random() * (amax * 2 - amin) + amin).toFixed(2); // 适度偏高
+                let discount = +(Math.random() * amount * 0.2).toFixed(2);
+                let realAmount = +(amount - discount).toFixed(2);
+                const opId = operatorIds[Math.floor(Math.random() * operatorIds.length)];
+                const brId = branchIds[Math.floor(Math.random() * branchIds.length)];
+                const date = new Date(baseTime.getTime() + Math.floor(idx / 15) * 24 * 3600 * 1000);
+                let hour = [6, 7, 8, 21, 22][Math.floor(Math.random() * 5)]; // 营业边缘时段
+                let minute = Math.floor(Math.random() * 60);
+                const timeStr = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')} ${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}:00`;
+                rows.push({
+                    "账单编号": `BILL${(idx+1).toString().padStart(3,'0')}`,
+                    "营业厅编号": brId,
+                    "账单日期": `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`,
+                    "操作员ID": opId,
+                    "业务类型": btype,
+                    "费用金额": amount,
+                    "优惠金额": discount,
+                    "实收金额": realAmount,
+                    "操作时间": timeStr,
+                    "高风险标记": "否",
+                    "中风险标记": "是"
+                });
+            }
+            // 最后生成低风险
+            for (let i = 0; i < lowCount; i++, idx++) {
+                const [btype, [amin, amax]] = businessTypes[Math.floor(Math.random() * businessTypes.length)];
+                let amount = +(Math.random() * (amax - amin) + amin).toFixed(2);
+                let discount = +(Math.random() * amount * 0.2).toFixed(2);
+                let realAmount = +(amount - discount).toFixed(2);
+                const opId = operatorIds[Math.floor(Math.random() * operatorIds.length)];
+                const brId = branchIds[Math.floor(Math.random() * branchIds.length)];
+                const date = new Date(baseTime.getTime() + Math.floor(idx / 15) * 24 * 3600 * 1000);
+                let hour = Math.floor(Math.random() * 12) + 8; // 正常营业时段
+                let minute = Math.floor(Math.random() * 60);
+                const timeStr = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')} ${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}:00`;
+                rows.push({
+                    "账单编号": `BILL${(idx+1).toString().padStart(3,'0')}`,
+                    "营业厅编号": brId,
+                    "账单日期": `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`,
+                    "操作员ID": opId,
+                    "业务类型": btype,
+                    "费用金额": amount,
+                    "优惠金额": discount,
+                    "实收金额": realAmount,
+                    "操作时间": timeStr,
+                    "高风险标记": "否",
+                    "中风险标记": "否"
                 });
             }
             currentData = rows;
-            showSuccess('已生成30条模拟账单数据');
+            showSuccess('已生成100条模拟账单数据（低:中:高 ≈ 7:2:1）');
             document.getElementById('detectBtn').disabled = false;
             detectAnomalies();
         }
